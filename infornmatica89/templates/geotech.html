@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>GeoTech World 2026</title>
+    
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: 'Courier New', monospace; background-color: #0a0f1d; color: #00ff66; margin: 0; padding: 20px; }
+        .top-bar { display: flex; justify-content: space-between; background: #111a2e; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #00ffff; align-items: center; }
+        .user-info { color: #fff; }
+        .auth-btn { background: #1877f2; color: white; padding: 6px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        .logout-btn { background: #ff3366; }
+        .main-container { display: flex; gap: 20px; height: 680px; }
+        #map { flex: 2; height: 100%; border: 2px solid #00ffff; border-radius: 8px; background: #151515; }
+        .intel-panel { flex: 1; background: #111a2e; border: 2px solid #1877f2; border-radius: 8px; padding: 20px; overflow-y: auto; color: #e0e6ed; }
+        .intel-header { display: flex; align-items: center; gap: 15px; border-bottom: 2px dashed #00ffff; padding-bottom: 15px; margin-bottom: 15px; }
+        .intel-header h2 { margin: 0; color: #00ffff; }
+        .flag { width: 55px; border: 1px solid #444; }
+        .section-title { color: #ff3366; font-weight: bold; margin-top: 14px; text-transform: uppercase; font-size: 12px; border-left: 3px solid #ff3366; padding-left: 6px; }
+        .section-content { background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; font-size: 13px; margin-top: 3px; }
+        .edit-input { width: 95%; background: #222; color: #fff; border: 1px solid #00ffff; padding: 5px; display: none; margin-top: 4px; font-family: monospace; }
+        .commento-box { background: #1c2a4a; padding: 6px; margin-top: 5px; border-radius: 4px; font-size: 12px; }
+        .btn-action { background: #00ff66; color: black; border: none; padding: 6px 12px; cursor: pointer; font-weight: bold; margin-top: 6px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div>
+            <span style="color: #00ffff; font-weight: bold;">[ GEOTECH 30-NODES DETECTOR ]</span> 
+            <span class="user-info">| Logged: <strong>{{ username }}</strong> (Ruolo: <span style="color: #ff3366;">{{ ruolo | upper }}</span>)</span>
+        </div>
+        <div>
+            {% if username == 'antony' %}
+                <a href="/fsl_antony" class="auth-btn" style="background: #a400a4; margin-right: 10px; border: 1px solid #ff00ff;">📁 FSL di Antony</a>
+            {% endif %}
+
+            {% if ruolo == 'admin' %}
+                <a href="/upload" class="auth-btn" style="background: #ff9900; margin-right: 10px;">📤 Carica File</a>
+            {% endif %}
+
+            {% if ruolo == 'guest' %}
+                <a href="/login" class="auth-btn">Accedi</a>
+                <a href="/registrazione" class="auth-btn" style="background:#00a400;">Registrati</a>
+            {% else %}
+                <a href="/logout" class="auth-btn logout-btn">Disconnetti</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div id="map"></div>
+        <div class="intel-panel" id="intelPanel">
+            <h2>Terminale Monitoraggio Globale</h2>
+            <p>Seleziona uno dei 30 nodi radar attivi sulla mappa per avviare la decrittazione.</p>
+        </div>
+    </div>
+
+    <script>
+        var ruoloUtente = "{{ ruolo }}";
+        var map = L.map('map').setView([25, 0], 2);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+        // COORDINATE PRECISE DEI 30 PAESI GLOBALI
+        var nodi = [
+            { nome: "United States", lat: 37.0902, lng: -95.7129, id: "USA" },
+            { nome: "China", lat: 35.8617, lng: 104.1954, id: "China" },
+            { nome: "Russia", lat: 61.5240, lng: 105.3188, id: "Russia" },
+            { nome: "Italy", lat: 41.8719, lng: 12.5674, id: "Italy" },
+            { nome: "Japan", lat: 36.2048, lng: 138.2529, id: "Japan" },
+            { nome: "Germany", lat: 51.1657, lng: 10.4515, id: "Germany" },
+            { nome: "United Kingdom", lat: 55.3781, lng: -3.4360, id: "United Kingdom" },
+            { nome: "India", lat: 20.5937, lng: 78.9629, id: "India" },
+            { nome: "Brazil", lat: -14.2350, lng: -51.9253, id: "Brazil" },
+            { nome: "Australia", lat: -25.2744, lng: 133.7751, id: "Australia" },
+            { nome: "South Africa", lat: -30.5595, lng: 22.9375, id: "South Africa" },
+            { nome: "Saudi Arabia", lat: 23.8859, lng: 45.0792, id: "Saudi Arabia" },
+            { nome: "France", lat: 46.2276, lng: 2.2137, id: "France" },
+            { nome: "Canada", lat: 56.1304, lng: -106.3468, id: "Canada" },
+            { nome: "South Korea", lat: 35.9078, lng: 127.7669, id: "South Korea" },
+            { nome: "Israel", lat: 31.0461, lng: 34.8516, id: "Israel" },
+            { nome: "Spain", lat: 40.4637, lng: -3.7492, id: "Spain" },
+            { nome: "Ukraine", lat: 48.3794, lng: 31.1656, id: "Ukraine" },
+            { nome: "Egypt", lat: 26.8206, lng: 30.8025, id: "Egypt" },
+            { nome: "Nigeria", lat: 9.0820, lng: 8.6753, id: "Nigeria" },
+            { nome: "Turkey", lat: 38.9637, lng: 35.2433, id: "Turkey" },
+            { nome: "Argentina", lat: -38.4161, lng: -63.6167, id: "Argentina" },
+            { nome: "Mexico", lat: 23.6345, lng: -102.5528, id: "Mexico" },
+            { nome: "Indonesia", lat: -0.7893, lng: 113.9213, id: "Indonesia" },
+            { nome: "Singapore", lat: 1.3521, lng: 103.8198, id: "Singapore" },
+            { nome: "Netherlands", lat: 52.1326, lng: 5.2913, id: "Netherlands" },
+            { nome: "Switzerland", lat: 46.8182, lng: 8.2275, id: "Switzerland" },
+            { nome: "Sweden", lat: 60.1282, lng: 18.6435, id: "Sweden" },
+            { nome: "Poland", lat: 51.9194, lng: 19.1451, id: "Poland" },
+            { nome: "United Arab Emirates", lat: 23.4241, lng: 53.8478, id: "United Arab Emirates" }
+        ];
+
+        nodi.forEach(function(p) {
+            var marker = L.circleMarker([p.lat, p.lng], { radius: 6.5, color: '#ff3366', fillColor: '#ff3366', fillOpacity: 0.8 }).addTo(map);
+            marker.bindTooltip(p.nome, { direction: 'top' });
+            marker.on('click', function() { caricaDatiPaese(p.nome, p.id); });
+        });
+
+        function caricaDatiPaese(nomePaese, idPaese) {
+            var panel = document.getElementById('intelPanel');
+            panel.innerHTML = "<h2>DECRITTAZIONE DEGLI IMPULSI RADAR...</h2>";
+
+            fetch('/api/paese/' + nomePaese)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.errore_permesso) {
+                        panel.innerHTML = `
+                            <h2 style="color: #ff3366;">ACCESSO NEGATO</h2>
+                            <p>I profili <strong>Ospite</strong> non dispongono delle chiavi crittografiche per estrarre i flussi di dati.</p>
+                            <a href="/login" class="auth-btn">Accedi</a>
+                        `;
+                        return;
+                    }
+
+                    var mostraTastoModifica = (ruoloUtente === 'admin') ? `<button class="btn-action" style="background:#00ffff;" onclick="mostraModifiche()">⚙️ Modifica Dossier</button>` : '';
+
+                    panel.innerHTML = `
+                        <div class="intel-header">
+                            ${data.bandiera ? `<img class="flag" src="${data.bandiera}">` : ''}
+                            <div>
+                                <h2>${data.nome.toUpperCase()}</h2>
+                                <small>Capitale: ${data.capitale} | Pop: ${data.popolazione}</small>
+                            </div>
+                        </div>
+                        ${mostraTastoModifica}
+                        
+                        <div class="section-title">Leadership Strategica</div>
+                        <div class="section-content" id="leader_val">${data.leader}</div>
+                        <input class="edit-input" id="leader_input" value="${data.leader}" onchange="salvaCambio('${idPaese}', 'leader')">
+
+                        <div class="section-title">Quadro Economico</div>
+                        <div class="section-content" id="economia_val">${data.economia}</div>
+                        <input class="edit-input" id="economia_input" value="${data.economia}" onchange="salvaCambio('${idPaese}', 'economia')">
+
+                        <div class="section-title">Capacità Cyber-Infrastrutturali</div>
+                        <div class="section-content" id="cyber_val">${data.cybersecurity}</div>
+                        <input class="edit-input" id="cyber_input" value="${data.cybersecurity}" onchange="salvaCambio('${idPaese}', 'cybersecurity')">
+
+                        <div class="section-title">Aziende Tech Leader</div>
+                        <div class="section-content" id="aziende_val">${data.aziende}</div>
+                        <input class="edit-input" id="aziende_input" value="${data.aziende}" onchange="salvaCambio('${idPaese}', 'aziende')">
+
+                        <hr style="border-color:#222; margin-top:20px;">
+                        <h3>Note del Personale</h3>
+                        <div id="bloccoCommenti"></div>
+                        <input type="text" id="nuovaNota" placeholder="Inserisci nel log..." style="width:70%; background:#222; color:#fff; border:1px solid #1877f2; padding:5px; margin-top:10px;">
+                        <button class="btn-action" onclick="inviaNota('${idPaese}')">Invia</button>
+                    `;
+
+                    var area = document.getElementById('bloccoCommenti');
+                    data.commenti.forEach(c => {
+                        area.innerHTML += `<div class="commento-box"><strong>@${c.autore}:</strong> ${c.testo}</div>`;
+                    });
+                });
+        }
+
+        function mostraModifiche() {
+            document.querySelectorAll('.edit-input').forEach(i => i.style.display = i.style.display === 'block' ? 'none' : 'block');
+        }
+
+        function salvaCambio(idPaese, campo) {
+            var val = document.getElementById(campo + '_input').value;
+            fetch('/api/modifica', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paese: idPaese, campo: campo, valore: val })
+            }).then(() => { document.getElementById(campo + '_val').innerText = val; });
+        }
+
+        function inviaNota(idPaese) {
+            var txt = document.getElementById('nuovaNota').value;
+            if(!txt) return;
+            fetch('/api/commento', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paese: idPaese, testo: txt })
+            }).then(() => {
+                document.getElementById('bloccoCommenti').insertAdjacentHTML('afterbegin', `<div class="commento-box"><strong>@Tu:</strong> ${txt}</div>`);
+                document.getElementById('nuovaNota').value = '';
+            });
+        }
+    </script>
+</body>
+</html>
