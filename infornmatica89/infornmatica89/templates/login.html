@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>GeoTech - Login Operatore</title>
+    <style>
+        body { font-family: monospace; background: #0a0f1d; color: #00ff66; text-align: center; padding-top: 120px; }
+        .login-card { width: 320px; margin: 0 auto; background: #111a2e; padding: 25px; border: 1px solid #00ffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,255,255,0.1); }
+        input { width: 90%; padding: 8px; margin: 10px 0; background: #222; color: #fff; border: 1px solid #1877f2; font-family: monospace; }
+        button { background: #00ff66; color: black; border: none; padding: 10px; width: 96%; cursor: pointer; font-weight: bold; font-family: monospace; text-transform: uppercase; }
+        a { color: #00ffff; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h3 style="color:#00ffff; margin-bottom:20px;">[ ACCESSO TERMINALE ]</h3>
+        <form action="/login" method="POST">
+            <input type="text" name="username" placeholder="Codice Operatore (Username)" required>
+            <input type="password" name="password" placeholder="Chiave di Sicurezza (Password)" required>
+            <button type="submit">Esegui Handshake</button>
+        </form>
+        <p style="margin-top:20px;"><a href="/registrazione">Registra Nuovo Operatore</a> | <a href="/" style="color:#fff;">Ospite</a></p>
+    </div>
+</body>
+</html>
