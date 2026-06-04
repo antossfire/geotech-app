@@ -25,14 +25,31 @@
         .edit-input { width: 95%; background: #222; color: #fff; border: 1px solid #00ffff; padding: 5px; display: none; margin-top: 4px; font-family: monospace; }
         .commento-box { background: #1c2a4a; padding: 6px; margin-top: 5px; border-radius: 4px; font-size: 12px; }
         .btn-action { background: #00ff66; color: black; border: none; padding: 6px 12px; cursor: pointer; font-weight: bold; margin-top: 6px; border-radius: 3px; }
+        
+        /* Audio Indicator Badge nella top bar */
+        .audio-badge { font-size: 11px; color: #555; text-transform: uppercase; border: 1px solid #333; padding: 2px 6px; border-radius: 3px; margin-left: 10px; }
+        .audio-badge.active { color: #00ff66; border-color: #00ff66; text-shadow: 0 0 5px #00ff66; }
+        
+        /* Pulsante Controllo Audio */
+        .audio-ctrl-btn { background: none; border: 1px solid #ff3366; color: #ff3366; font-family: 'Courier New', monospace; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 3px; cursor: pointer; margin-left: 8px; text-transform: uppercase; }
+        .audio-ctrl-btn.playing { border-color: #ff9900; color: #ff9900; }
     </style>
 </head>
 <body>
+
+    <audio id="bg-music" loop>
+        <source src="/static/audio/musica_geotech.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="click-sound">
+        <source src="/static/audio/terminal_click.mp3" type="audio/mpeg">
+    </audio>
 
     <div class="top-bar">
         <div>
             <span style="color: #00ffff; font-weight: bold;">[ GEOTECH 30-NODES DETECTOR ]</span> 
             <span class="user-info">| Logged: <strong>{{ username }}</strong> (Ruolo: <span style="color: #ff3366;">{{ ruolo | upper }}</span>)</span>
+            <span class="audio-badge" id="audio-tag">Audio: Muted</span>
+            <button class="audio-ctrl-btn" id="audio-toggle-btn" onclick="toggleMusica()">[ 🔇 OFF ]</button>
         </div>
         <div>
             {% if username == 'antony' %}
@@ -65,6 +82,67 @@
         var map = L.map('map').setView([25, 0], 2);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+        // CONFIGURAZIONE SISTEMA AUDIO
+        const bgMusic = document.getElementById('bg-music');
+        const clickSound = document.getElementById('click-sound');
+        const audioTag = document.getElementById('audio-tag');
+        const audioToggleBtn = document.getElementById('audio-toggle-btn');
+        let isAudioInitialized = false;
+        let isMusicMuted = false;
+
+        // Bilanciamento Volumi (0.2 = Sottofondo morbido, 0.4 = Effetto click definito)
+        bgMusic.volume = 0.2;
+        clickSound.volume = 0.4;
+
+        // Attivazione dell'audio al primo input dell'utente
+        function sbloccaAudioGlobale() {
+            if (!isAudioInitialized) {
+                bgMusic.play().then(() => {
+                    isAudioInitialized = true;
+                    audioTag.textContent = "Audio: Live";
+                    audioTag.classList.add('active');
+                    audioToggleBtn.textContent = "[ 🔊 MUTE ]";
+                    audioToggleBtn.classList.add('playing');
+                }).catch(err => console.log("Riproduzione audio bloccata dal browser in attesa di interazione."));
+            }
+        }
+
+        function eseguiClickFX() {
+            if (isAudioInitialized) {
+                clickSound.currentTime = 0; // Azzera la testina per suonare immediatamente anche a click ripetuti
+                clickSound.play().catch(e => console.log(e));
+            }
+        }
+
+        // Funzione per spegnere o riaccendere la musica di sottofondo
+        function toggleMusica() {
+            eseguiClickFX(); // Riproduce il feedback del click sul pulsante
+            if (!isAudioInitialized) {
+                sbloccaAudioGlobale();
+                return;
+            }
+
+            if (!isMusicMuted) {
+                bgMusic.pause();
+                isMusicMuted = true;
+                audioToggleBtn.textContent = "[ 🔇 UNMUTE ]";
+                audioToggleBtn.classList.remove('playing');
+                audioTag.textContent = "Audio: Music Off";
+            } else {
+                bgMusic.play().catch(e => console.log(e));
+                isMusicMuted = false;
+                audioToggleBtn.textContent = "[ 🔊 MUTE ]";
+                audioToggleBtn.classList.add('playing');
+                audioTag.textContent = "Audio: Live";
+            }
+        }
+
+        // Ascoltatore universale per rimuovere il blocco browser sul primo click ovunque nella pagina
+        document.body.addEventListener('click', () => {
+            sbloccaAudioGlobale();
+        }, { once: true });
+
 
         // COORDINATE PRECISE DEI 30 PAESI GLOBALI
         var nodi = [
@@ -103,7 +181,11 @@
         nodi.forEach(function(p) {
             var marker = L.circleMarker([p.lat, p.lng], { radius: 6.5, color: '#ff3366', fillColor: '#ff3366', fillOpacity: 0.8 }).addTo(map);
             marker.bindTooltip(p.nome, { direction: 'top' });
-            marker.on('click', function() { caricaDatiPaese(p.nome, p.id); });
+            marker.on('click', function() { 
+                sbloccaAudioGlobale(); // Sicurezza per l'audio
+                eseguiClickFX();       // Riproduce il suono click al tocco del nodo radar
+                caricaDatiPaese(p.nome, p.id); 
+            });
         });
 
         function caricaDatiPaese(nomePaese, idPaese) {
@@ -117,12 +199,12 @@
                         panel.innerHTML = `
                             <h2 style="color: #ff3366;">ACCESSO NEGATO</h2>
                             <p>I profili <strong>Ospite</strong> non dispongono delle chiavi crittografiche per estrarre i flussi di dati.</p>
-                            <a href="/login" class="auth-btn">Accedi</a>
+                            <a href="/login" class="auth-btn" onclick="eseguiClickFX()">Accedi</a>
                         `;
                         return;
                     }
 
-                    var mostraTastoModifica = (ruoloUtente === 'admin') ? `<button class="btn-action" style="background:#00ffff;" onclick="mostraModifiche()">⚙️ Modifica Dossier</button>` : '';
+                    var mostraTastoModifica = (ruoloUtente === 'admin') ? `<button class="btn-action" style="background:#00ffff;" onclick="eseguiClickFX(); mostraModifiche()">⚙️ Modifica Dossier</button>` : '';
 
                     panel.innerHTML = `
                         <div class="intel-header">
@@ -170,6 +252,7 @@
 
         function salvaCambio(idPaese, campo) {
             var val = document.getElementById(campo + '_input').value;
+            eseguiClickFX(); // Suono di feedback alla modifica
             fetch('/api/modifica', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -180,6 +263,7 @@
         function inviaNota(idPaese) {
             var txt = document.getElementById('nuovaNota').value;
             if(!txt) return;
+            eseguiClickFX(); // Suono di feedback all'invio del testo log
             fetch('/api/commento', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -189,6 +273,13 @@
                 document.getElementById('nuovaNota').value = '';
             });
         }
+
+        // Collegamento dell'effetto click a tutti i bottoni del menu statico superiore
+        document.querySelectorAll('.auth-btn').forEach(bottone => {
+            bottone.addEventListener('click', () => {
+                eseguiClickFX();
+            });
+        });
     </script>
 </body>
 </html>

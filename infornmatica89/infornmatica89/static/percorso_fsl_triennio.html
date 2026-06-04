@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentazione FSL Antony - Terminale Triennio</title>
+    <style>
+        :root {
+            --bg-color: #040814;
+            --container-bg: #091124;
+            --neon-magenta: #ff00ff;
+            --neon-ciano: #00ffff;
+            --neon-green: #00ff66;
+            --text-color: #fff;
+            --font-terminal: 'Courier New', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-terminal);
+            background: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Barra superiore del terminale */
+        header {
+            background: rgba(9, 17, 36, 0.8);
+            border-bottom: 2px solid var(--neon-magenta);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 15px rgba(255, 0, 255, 0.15);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 16px;
+            color: var(--neon-ciano);
+            text-shadow: 0 0 8px var(--neon-ciano);
+        }
+
+        .system-status {
+            color: var(--neon-green);
+            font-size: 12px;
+        }
+
+        /* Contenitore Slide */
+        .presentation-container {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .slide {
+            position: absolute;
+            width: 90%;
+            max-width: 900px;
+            height: 80%;
+            max-height: 550px;
+            background: var(--container-bg);
+            border: 2px solid var(--neon-ciano);
+            border-radius: 8px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+        }
+
+        /* Colori e stili specifici delle slide */
+        .slide-title {
+            font-size: 24px;
+            color: var(--neon-ciano);
+            text-shadow: 0 0 10px var(--neon-ciano);
+            border-bottom: 1px dashed rgba(0, 255, 255, 0.3);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .slide-subtitle {
+            font-size: 16px;
+            color: var(--neon-magenta);
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .slide-content {
+            flex-grow: 1;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+
+        .slide-content ul {
+            list-style: none;
+        }
+
+        .slide-content li {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .slide-content li::before {
+            content: "›";
+            position: absolute;
+            left: 0;
+            color: var(--neon-green);
+            font-weight: bold;
+            font-size: 20px;
+            top: -2px;
+        }
+
+        .highlight {
+            color: var(--neon-green);
+            font-weight: bold;
+        }
+
+        .highlight-magenta {
+            color: var(--neon-magenta);
+            font-weight: bold;
+        }
+
+        /* Decorazione stile codice */
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid var(--neon-magenta);
+            padding: 15px;
+            font-family: monospace;
+            font-size: 13px;
+            margin: 15px 0;
+            color: #a2b4c7;
+        }
+
+        /* Barra Inferiore e Controlli */
+        footer {
+            background: rgba(9, 17, 36, 0.8);
+            border-top: 1px solid rgba(255, 0, 255, 0.2);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .progress-bar-container {
+            width: 40%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 16.66%;
+            background: linear-gradient(90deg, var(--neon-magenta), var(--neon-ciano));
+            transition: width 0.3s ease;
+        }
+
+        .slide-number {
+            font-size: 14px;
+            color: var(--neon-ciano);
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-ctrl {
+            background: transparent;
+            border: 1px solid var(--neon-ciano);
+            color: var(--neon-ciano);
+            padding: 8px 18px;
+            font-family: var(--font-terminal);
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-ctrl:hover {
+            background: var(--neon-ciano);
+            color: #000;
+            box-shadow: 0 0 10px var(--neon-ciano);
+        }
+
+        .btn-ctrl:disabled {
+            border-color: #333;
+            color: #333;
+            cursor: not-allowed;
+            box-shadow: none;
+            background: transparent;
+        }
+
+        /* Interruttore Mute Integrato */
+        .audio-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-mute {
+            background: transparent;
+            border: 1px dashed var(--neon-magenta);
+            color: var(--neon-magenta);
+            font-family: var(--font-terminal);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-mute:hover {
+            background: rgba(255, 0, 255, 0.1);
+            box-shadow: 0 0 8px var(--neon-magenta);
+        }
+
+        .audio-status {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+        }
+        
+        .audio-status.active {
+            color: var(--neon-green);
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+
+        /* Istruzioni touch/tastiera */
+        .keyboard-tips {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .slide {
+                padding: 20px;
+                height: 90%;
+            }
+            .slide-title {
+                font-size: 18px;
+            }
+            .slide-content {
+                font-size: 12px;
+            }
+            .keyboard-tips {
+                display: none;
+            }
+            footer {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+            .progress-bar-container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="/static/audio/ambient_cyberpunk.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="click-sound">
+        <source src="/static/audio/terminal_click.mp3" type="audio/mpeg">
+    </audio>
+
+    <header>
+        <h1>[ SYSTEM_PRESENTATION_PORTFOLIO ]</h1>
+        <div class="system-status">● OPERATORE: ANTONY // ROOT_ACTIVE</div>
+    </header>
+
+    <div class="presentation-container" id="swipe-area">
+        
+        <div class="slide active slide-intro" style="border-color: var(--neon-magenta);">
+            <div>
+                <h1 class="slide-title" style="color: var(--neon-magenta); text-shadow: 0 0 15px var(--neon-magenta);">[ SYSTEM: AVVIO PERCORSO FSL ]</h1>
+                <p class="slide-subtitle">Analisi e Archiviazione Flussi Dati Triennio PCTO / FSL</p>
+                
+                <div class="code-block" style="text-align: left; max-width: 500px; margin: 20px auto;">
+                    $ sudo init fsl_presentation_antony<br>
+                    [SYSTEM]: Handshake eseguito con successo.<br>
+                    [SYSTEM]: Caricamento moduli 3°, 4° e 5° anno completato.
+                </div>
+                
+                <p style="font-size: 13px; color: #a2b4c7; margin-top: 20px;">
+                    Usa i pulsanti in basso o le <span class="highlight">frecce della tastiera</span> per scansionare le slide.
+                </p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2 class="slide-title">[ LIVELLO 03: LE FONDAMENTA ]</h2>
+            <p class="slide-subtitle">Anno Scolastico 2023/24 - Introduzione e Logica</p>
+            <div class="slide-content">
+                <ul>
+                    <li><span class="highlight">Informatica in Gioco:</span> Primi approcci allo sviluppo software strutturato e all'applicazione dei concetti chiave della logica di programmazione.</li>
+                    <li><span class="highlight">Cisco Academy Base:</span> Certificazione ed apprendimento pratico su architetture hardware, sistemi operativi e configurazione reti fisiche (IT Essentials).</li>
+                    <li><span class="highlight">Cybersecurity:</span> Comprensione delle vulnerabilità, crittografia e metodologie di difesa e protezione degli asset informatici.</li>
+                </ul>
+            </div>
+            <div class="code-block">
+                SYS_STATUS: Moduli 3° Anno Caricati (100% Validati) // Attestati registrati nel server.
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2 class="slide-title" style="color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); border-color: var(--neon-green);">[ LIVELLO 04: AI & IOT ]</h2>
+            <p class="slide-subtitle" style="color: var(--neon-green);">Anno Scolastico 2024/25 - Sistemi Intelligenti</p>
+            <div class="slide-content">
+                <ul>
+                    <li><span class="highlight" style="color: var(--neon-green);">IBM SkillsBuild:</span> Studio approfondito dei modelli neurali, Machine Learning ed etica dell'Intelligenza Artificiale (AI Fundamentals).</li>
+                    <li><span class="highlight" style="color: var(--neon-green);">Cisco IoT:</span> Gestione, sviluppo e programmazione per l'Internet of Things (connessione ed automazione sensori intelligenti).</li>
+                    <li><span class="highlight" style="color: var(--neon-green);">Repository Extra:</span> Integrazione strategica di certificazioni e micro-credenziali personali esterne nel database FSL.</li>
+                </ul>
+            </div>
+            <div class="code-block" style="border-left-color: var(--neon-green);">
+                SYS_STATUS: Integrazione API IBM & Cisco completata con successo nel cloud.
+            </div>
+        </div>
+
+        <div class="slide" style="border-color: var(--neon-magenta);">
+            <h2 class="slide-title" style="color: var(--neon-magenta); text-shadow: 0 0 10px var(--neon-magenta);">[ CASE STUDY: INMATICA ]</h2>
+            <p class="slide-subtitle">Attività Verticale Aziendale - 4° Anno</p>
+            <div class="slide-content">
+                <p>Durante il quarto anno, l'esperienza con l'azienda <span class="highlight-magenta">INMATICA</span> ha permesso di applicare concretamente le competenze teoriche in un vero contesto IT enterprise:</p>
+                <ul style="margin-top: 15px;">
+                    <li><span class="highlight-magenta">Analisi dei Processi:</span> Studio di flussi di lavoro, intercettazione dei requisiti del cliente e pianificazione software.</li>
+                    <li><span class="highlight-magenta">Reportistica Tecnica:</span> Stesura guidata di documentazione professionale.</li>
+                </ul>
+                <p style="margin-top: 15px; font-size: 13px;">Il documento ufficiale <span class="highlight-magenta">inmatica.pdf</span> è ospitato sul server web ed è consultabile direttamente in tempo reale dal terminale principale.</p>
+            </div>
+            <div class="code-block" style="border-left-color: var(--neon-magenta);">
+                FILE_STATUS: inmatica.pdf caricato sul server. Link di rendering pronto all'esecuzione.
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2 class="slide-title">[ LIVELLO 05: FINANZA E FUTURO ]</h2>
+            <p class="slide-subtitle">Anno Scolastico 2025/26 - Moduli di Orientamento</p>
+            <div class="slide-content">
+                <ul>
+                    <li><span class="highlight">BPER BANCA:</span> Modulo di educazione economico-finanziaria per comprendere delle dinamiche aziendali, gli asset di bilancio e le logiche di mercato.</li>
+                    <li><span class="highlight">Salone dello Studente BARI:</span> Attività immersiva di orientamento universitario, accademico e professionale per pianificare i successivi flussi di carriera tech.</li>
+                </ul>
+            </div>
+            <div class="code-block">
+                SYS_STATUS: Attività finale "In Corso" // Sincronizzazione ed allineamento per l'Esame di Stato.
+            </div>
+        </div>
+
+        <div class="slide" style="border-color: var(--neon-green);">
+            <h2 class="slide-title" style="color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green);">[ TERMINALE LOG: CONCLUSIONE ]</h2>
+            <p class="slide-subtitle" style="color: var(--neon-green);">Sintesi Finale e Ringraziamenti</p>
+            <div class="slide-content" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px 0;">
+                <p style="margin-bottom: 20px;">L'intero percorso di FSL è stato centralizzato su questa web app proprietaria per consentire alla commissione d'esame una scansione immediata, digitale e interattiva degli attestati.</p>
+                
+                <p class="highlight" style="font-size: 18px; margin-top: 10px; border: 1px dashed var(--neon-green); padding: 12px 25px; background: rgba(0, 255, 102, 0.05); border-radius: 4px; max-width: 650px;">
+                    Si ringrazia la chiarissima Commissione per l'attenzione prestata.
+                </p>
+            </div>
+            <div class="code-block" style="border-left-color: var(--neon-green); text-align: center;">
+                [SUCCESS]: Fine delle trasmissioni. Sessione d'esame completata. EOF.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="keyboard-tips">Frecce [◀] [▶] per navigare</div>
+
+    <footer>
+        <div class="slide-number" id="slide-num">SLIDE: 01 / 06</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div class="controls">
+            <div class="audio-wrapper">
+                <span class="audio-status" id="audio-status-tag">Audio: Muted</span>
+                <button class="btn-mute" id="mute-btn" onclick="toggleMusica()">[ 🔇 MUTE ]</button>
+            </div>
+            <button class="btn-ctrl" id="prev-btn" disabled>◀ PREV</button>
+            <button class="btn-ctrl" id="next-btn">NEXT ▶</button>
+        </div>
+    </footer>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const slideNum = document.getElementById('slide-num');
+        const progressFill = document.getElementById('progress-fill');
+        const audioStatusTag = document.getElementById('audio-status-tag');
+        const muteBtn = document.getElementById('mute-btn');
+        
+        // Riferimenti Audio
+        const bgMusic = document.getElementById('bg-music');
+        const clickSound = document.getElementById('click-sound');
+        
+        let currentSlide = 0;
+        const totalSlides = slides.length;
+        let isAudioInitialized = false;
+        let isMusicMuted = false;
+
+        // Imposta i volumi iniziali
+        bgMusic.volume = 0.2;
+        clickSound.volume = 0.4;
+
+        // Funzione per sbloccare e riprodurre l'audio al primo input dell'utente
+        function initAudio() {
+            if (!isAudioInitialized) {
+                bgMusic.play().then(() => {
+                    isAudioInitialized = true;
+                    if (!isMusicMuted) {
+                        audioStatusTag.textContent = "Audio: Live";
+                        audioStatusTag.classList.add('active');
+                        muteBtn.textContent = "[ 🔇 MUTE ]";
+                    }
+                }).catch(err => console.log("Riproduzione audio in attesa di interazione..."));
+            }
+        }
+
+        function playClickFX() {
+            // L'effetto click suona sempre, a meno che tu non voglia zittire anche quello
+            clickSound.currentTime = 0; 
+            clickSound.play().catch(e => console.log(e));
+        }
+
+        // Funzione per mutare/smutare SOLO la musica di sottofondo
+        function toggleMusica(event) {
+            if (event) event.stopPropagation(); // Evita conflitti di click sul body
+            
+            if (!isAudioInitialized) {
+                isAudioInitialized = true;
+                bgMusic.play().then(() => {
+                    audioStatusTag.textContent = "Audio: Live";
+                    audioStatusTag.classList.add('active');
+                    muteBtn.textContent = "[ 🔇 MUTE ]";
+                }).catch(e => console.log(e));
+                return;
+            }
+
+            if (!isMusicMuted) {
+                bgMusic.pause();
+                isMusicMuted = true;
+                audioStatusTag.textContent = "Audio: Muted";
+                audioStatusTag.classList.remove('active');
+                muteBtn.textContent = "[ 🔊 UNMUTE ]";
+            } else {
+                bgMusic.play().catch(e => console.log(e));
+                isMusicMuted = false;
+                audioStatusTag.textContent = "Audio: Live";
+                audioStatusTag.classList.add('active');
+                muteBtn.textContent = "[ 🔇 MUTE ]";
+            }
+        }
+
+        function updateSlides() {
+            slides.forEach((slide, index) => {
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+
+            // Gestione stato pulsanti
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+
+            // Aggiorna numero e barra di avanzamento
+            slideNum.textContent = `SLIDE: 0${currentSlide + 1} / 0${totalSlides}`;
+            const percentage = ((currentSlide + 1) / totalSlides) * 100;
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        // Eventi pulsanti
+        prevBtn.addEventListener('click', () => {
+            initAudio();
+            if (currentSlide > 0) {
+                currentSlide--;
+                playClickFX();
+                updateSlides();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            initAudio();
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                playClickFX();
+                updateSlides();
+            }
+        });
+
+        // Eventi da tastiera (frecce destra e sinistra)
+        document.addEventListener('keydown', (e) => {
+            initAudio();
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    playClickFX();
+                    updateSlides();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    playClickFX();
+                    updateSlides();
+                }
+            }
+        });
+
+        // Supporto Touch Swipe per dispositivi mobili
+        let touchstartX = 0;
+        let touchendX = 0;
+        const swipeArea = document.getElementById('swipe-area');
+
+        swipeArea.addEventListener('touchstart', e => {
+            initAudio();
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        swipeArea.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            handleGesture();
+        });
+
+        function handleGesture() {
+            if (touchendX < touchstartX - 50) {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    playClickFX();
+                    updateSlides();
+                }
+            }
+            if (touchendX > touchstartX + 50) {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    playClickFX();
+                    updateSlides();
+                }
+            }
+        }
+
+        // Intercettazione del primo click globale per sbloccare le policy audio dei browser
+        document.body.addEventListener('click', () => {
+            initAudio();
+        }, { once: true });
+    </script>
+</body>
+</html>
