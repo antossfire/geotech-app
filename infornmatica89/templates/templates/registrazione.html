@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>GeoTech - Registrazione</title>
+    <style>
+        body { font-family: monospace; background: #0a0f1d; color: #00ff66; text-align: center; padding-top: 100px; }
+        .reg-card { width: 320px; margin: 0 auto; background: #111a2e; padding: 25px; border: 1px solid #00ffff; border-radius: 8px; }
+        input { width: 90%; padding: 8px; margin: 10px 0; background: #222; color: #fff; border: 1px solid #1877f2; font-family: monospace; }
+        button { background: #00a400; color: white; border: none; padding: 10px; width: 96%; cursor: pointer; font-weight: bold; font-family: monospace; }
+        a { color: #00ffff; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="reg-card">
+        <h3 style="color:#00ffff; margin-bottom:20px;">[ RECRUITMENT PANNELLO ]</h3>
+        <form action="/registrazione" method="POST">
+            <input type="text" name="username" placeholder="Imposta Username" required>
+            <input type="password" name="password" placeholder="Imposta Password" required>
+            <input type="text" name="nazione" placeholder="Nazione di Origine (es. Italy)" required>
+            <button type="submit">Inizializza Profilo</button>
+        </form>
+        <p style="margin-top:20px;"><a href="/login">Ritorna alla Schermata di Login</a></p>
+    </div>
+</body>
+</html>
