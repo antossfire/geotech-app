@@ -7,7 +7,6 @@ import pymysql
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'chiave_segreta_geotech_2026')
 
-# Configurazione Cartella Upload e Limiti di Caricamento
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
@@ -15,20 +14,16 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# ==========================================
-# CONNESSIONE DATABASE MYSQL (CON VARIABILI D'AMBIENTE)
-# ==========================================
 def connetti_a_mysql():
     """
     Funzione per connettersi al database MySQL remoto.
     Prende i dati dalle variabili d'ambiente per sicurezza.
     """
     try:
-        # Se i dati non sono configurati sul server cloud, usa i fallback di test locali
         host_db = os.environ.get('DB_HOST', 'mysql-49fbfd2-antony-60d4.h.aivencloud.com')
         port_db = int(os.environ.get('DB_PORT', 26057))
         user_db = os.environ.get('DB_USER', 'avnadmin')
-        password_db = os.environ.get('DB_PASSWORD', 'AVNS_hANinbx3h7rgy2trxG3') # <-- Ricordati di cambiarla su Aiven!
+        password_db = os.environ.get('DB_PASSWORD', 'AVNS_hANinbx3h7rgy2trxG3') 
         name_db = os.environ.get('DB_NAME', 'defaultdb')
 
         connection = pymysql.connect(
@@ -38,18 +33,14 @@ def connetti_a_mysql():
             password=password_db,
             database=name_db,
             cursorclass=pymysql.cursors.DictCursor,
-            ssl={'ssl': {}}  # Aiven richiede la cifratura SSL obbligatoria
+            ssl={'ssl': {}} 
         )
         return connection
     except Exception as e:
         print(f"Errore di connessione al database MySQL: {e}")
         return None
 
-# ==========================================
-# ROTTE FLASK (ONLINE VIA DB)
-# ==========================================
 
-# Gestione della Favicon nativa da cartella static
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
@@ -76,7 +67,7 @@ def upload_file():
             return render_template('upload.html', successo=True, nome_file=filename)
     return render_template('upload.html', successo=False)
 
-# Area Riservata Antony
+# Area Riservata a Me
 @app.route('/fsl_antony')
 def fsl_antony():
     if session.get('username') != 'antony': 
@@ -102,7 +93,6 @@ def registrazione():
                 if cursor.fetchone():
                     return "Esistente", 400
                 
-                # Inserisce il nuovo utente
                 sql = "INSERT INTO utenti (username, password, ruolo, nazione) VALUES (%s, %s, 'user', %s)"
                 cursor.execute(sql, (username, password, nazione))
                 db.commit()
@@ -112,7 +102,6 @@ def registrazione():
             
     return render_template('registrazione.html')
 
-# Login Utente verificato sul Database Online
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -125,12 +114,10 @@ def login():
             
         try:
             with db.cursor() as cursor:
-                # Cerca l'utente nel database
                 sql = "SELECT * FROM utenti WHERE username = %s"
                 cursor.execute(sql, (username,))
                 utente = cursor.fetchone()
                 
-                # Controllo credenziali
                 if utente and utente['password'] == password:
                     session['username'] = utente['username']
                     session['ruolo'] = utente['ruolo']
@@ -148,7 +135,6 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-# API Recupero Dati Paese (Integrazione DB Aiven + API Esterna RestCountries)
 @app.route('/api/paese/<nome_paese>')
 def api_paese(nome_paese):
     if session.get('ruolo', 'guest') == 'guest': 
@@ -168,7 +154,6 @@ def api_paese(nome_paese):
     info_base = {"nome": nome_paese, "capitale": "Rilevata", "bandiera": "", "popolazione": "Mappata"}
     
     try:
-        # Richiesta HTTP a servizio esterno RestCountries per completare i dati geografici
         risposta = requests.get(f"https://restcountries.com/v3.1/name/{nome_paese}?fullText=true", verify=False, timeout=1.5)
         if risposta.status_code == 200:
             dati = risposta.json()[0]
@@ -178,7 +163,7 @@ def api_paese(nome_paese):
     except Exception: 
         pass
 
-    # Inizializziamo i valori di fallback se il paese non è censito nel DB
+   
     info_geotech = {"leader": "N/D", "economia": "N/D", "cybersecurity": "N/D", "aziende": "N/D"}
     commenti_paese = []
     
@@ -206,7 +191,7 @@ def api_paese(nome_paese):
     
     return jsonify({**info_base, **info_geotech, "commenti": commenti_paese, "errore_permesso": False})
 
-# API per aggiungere un commento sul Database Online
+
 @app.route('/api/commento', methods=['POST'])
 def aggiungi_commento():
     if 'username' not in session:
@@ -229,7 +214,6 @@ def aggiungi_commento():
                 db.close()
     return "Errore", 400
 
-# API per modificare i dati del Dossier Geotech sul Database (Solo Admin)
 @app.route('/api/modifica', methods=['POST'])
 def modifica_dossier():
     if session.get('ruolo') != 'admin': 
@@ -240,7 +224,6 @@ def modifica_dossier():
     campo = data.get('campo')
     valore = data.get('valore')
     
-    # Lista di controllo per evitare SQL Injection sui nomi delle colonne dinamiche
     campi_ammessi = ['leader', 'alleanze', 'economia', 'tecnologia', 'cybersecurity', 'aziende']
     if campo not in campi_ammessi:
         return "Campo non valido", 400
