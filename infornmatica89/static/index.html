@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FSL Cyber-Dashboard // ANTONY BARLETTA</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome per le icone cyber-tecnologiche -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Rajdhani & Share Tech Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Rajdhani', 'sans-serif'],
+                        mono: ['Share Tech Mono', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            black: '#030712',
+                            darker: '#0a0f1d',
+                            dark: '#0f172a',
+                            green: '#39ff14',
+                            cyan: '#00f0ff',
+                            pink: '#ff007f',
+                            yellow: '#ffdf00',
+                            gray: '#1e293b'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 10px rgba(0, 240, 255, 0.5), 0 0 20px rgba(0, 240, 255, 0.2)',
+                        'neon-green': '0 0 10px rgba(57, 255, 20, 0.5), 0 0 20px rgba(57, 255, 20, 0.2)',
+                        'neon-pink': '0 0 10px rgba(255, 0, 127, 0.5), 0 0 20px rgba(255, 0, 127, 0.2)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #02040a;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, rgba(2, 4, 10, 1) 100%),
+                linear-gradient(rgba(18, 24, 38, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(18, 24, 38, 0.1) 1px, transparent 1px);
+            background-size: 100% 100%, 20px 20px, 20px 20px;
+            overflow-x: hidden;
+        }
+
+        /* Scanline Overlay Effect */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.06),
+                rgba(0, 255, 0, 0.02),
+                rgba(0, 0, 255, 0.06)
+            );
+            background-size: 100% 4px, 6px 100%;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0.85;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #02040a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f0ff;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #39ff14;
+        }
+
+        /* Glitch Animation Keyframes */
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+        .glitch-hover:hover {
+            animation: glitch 0.3s linear infinite;
+        }
+
+        /* Neon pulse */
+        @keyframes pulse-cyan {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.3; }
+        }
+        .pulse-glow {
+            animation: pulse-cyan 3s infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 font-sans min-h-screen flex flex-col selection:bg-cyber-cyan selection:text-black">
+    <div class="scanlines"></div>
+
+    <!-- AUDIO SYNTH PLAYER (Web Audio API) -->
+    <div id="audio-panel" class="bg-cyber-darker border-b border-cyber-cyan/30 px-4 py-2 flex flex-wrap justify-between items-center text-xs font-mono relative z-50">
+        <div class="flex items-center gap-3">
+            <span class="inline-flex h-2 w-2 rounded-full bg-cyber-green animate-ping"></span>
+            <span class="text-cyber-cyan">AUDIO_SYNTH: ACTIVE</span>
+            <span class="text-slate-500 hidden sm:inline">| Generazione procedurale real-time</span>
+        </div>
+        <div class="flex items-center gap-4 mt-1 sm:mt-0">
+            <button id="toggle-drone" class="bg-cyber-gray border border-cyber-cyan/50 hover:bg-cyber-cyan/20 px-3 py-1 rounded text-cyber-cyan transition-all flex items-center gap-2">
+                <i class="fas fa-play" id="drone-icon"></i>
+                <span id="drone-text">Sottofondo Cyber-Drone</span>
+            </button>
+            <div class="text-slate-400 flex items-center gap-1">
+                <i class="fas fa-volume-up text-cyber-green"></i>
+                <span>Suono Click Abilitato</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN SYSTEM HEADER -->
+    <header class="bg-cyber-darker/90 border-b border-cyber-cyan/40 p-4 sticky top-0 backdrop-blur-md z-40 shadow-neon-cyan/10">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- Brand & Identity -->
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="h-12 w-12 border-2 border-cyber-green rounded-lg flex items-center justify-center text-cyber-green bg-cyber-green/10 shadow-neon-green/30">
+                    <i class="fa-solid fa-terminal text-2xl animate-pulse"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-2xl font-bold tracking-wider text-white uppercase font-mono">
+                            FSL_DASHBOARD <span class="text-cyber-green font-sans font-medium text-sm border border-cyber-green/50 px-1.5 py-0.2 rounded bg-cyber-green/10">v3.0</span>
+                        </h1>
+                    </div>
+                    <p class="text-xs font-mono text-slate-400">
+                        OPERATOR: <span class="text-cyber-cyan font-bold">ROOT@ANTONY_BARLETTA</span> // SECURE_ESTABLISHED_CONNECTION
+                    </p>
+                </div>
+            </div>
+
+            <!-- Global statistics indicators -->
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto md:justify-end font-mono text-xs">
+                <div class="bg-cyber-dark border border-slate-700/60 p-2 rounded flex flex-col min-w-[100px]">
+                    <span class="text-slate-500 text-[10px] uppercase">Rapporto Ore</span>
+                    <span class="text-cyber-green font-bold text-sm">150 / 150 <i class="fa-solid fa-circle-check ml-1"></i></span>
+                </div>
+                <div class="bg-cyber-dark border border-slate-700/60 p-2 rounded flex flex-col min-w-[100px]">
+                    <span class="text-slate-500 text-[10px] uppercase">Stato Triennio</span>
+                    <span class="text-cyber-cyan font-bold text-sm">COMPLETATO</span>
+                </div>
+                <div class="bg-cyber-dark border border-slate-700/60 p-2 rounded flex flex-col min-w-[100px]">
+                    <span class="text-slate-500 text-[10px] uppercase">Integrità Dati</span>
+                    <span class="text-cyber-yellow font-bold text-sm">100% VERIFIED</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENT LAYOUT -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 flex flex-col gap-6 relative z-10">
+
+        <!-- DECK NAVIGATION BAR -->
+        <nav class="bg-cyber-darker border border-cyber-cyan/30 p-1.5 rounded-lg flex flex-wrap gap-2 shadow-inner font-mono text-sm">
+            <button onclick="switchTab('system-info')" id="tab-system-info" class="tab-btn flex-1 min-w-[140px] text-center py-2.5 px-4 rounded transition-all flex items-center justify-center gap-2 border border-transparent text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fas fa-network-wired"></i> [INIT_SYSTEM]
+            </button>
+            <button onclick="switchTab('experiences')" id="tab-experiences" class="tab-btn flex-1 min-w-[140px] text-center py-2.5 px-4 rounded transition-all flex items-center justify-center gap-2 border border-transparent text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fas fa-project-diagram"></i> [NODI_ESPERIENZA]
+            </button>
+            <button onclick="switchTab('skills-tree')" id="tab-skills-tree" class="tab-btn flex-1 min-w-[140px] text-center py-2.5 px-4 rounded transition-all flex items-center justify-center gap-2 border border-transparent text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fas fa-shield-halved"></i> [SKILL_TREE]
+            </button>
+            <button onclick="switchTab('project-life')" id="tab-project-life" class="tab-btn flex-1 min-w-[140px] text-center py-2.5 px-4 rounded transition-all flex items-center justify-center gap-2 border border-transparent text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fas fa-globe"></i> [GEOPOLITICA_DIGITALE]
+            </button>
+        </nav>
+
+        <!-- ==================== TAB 1: SYSTEM INFO ==================== -->
+        <section id="pane-system-info" class="tab-pane hidden flex flex-col gap-6">
+            <!-- Hero Dashboard -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Status & Intro -->
+                <div class="lg:col-span-2 bg-cyber-darker border border-cyber-cyan/30 p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group">
+                    <!-- Tech overlay grids -->
+                    <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-cyber-cyan/5 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div>
+                        <div class="flex items-center gap-2 mb-2 font-mono text-xs text-cyber-cyan">
+                            <span>// PROTOCOLLO DI PRESENTAZIONE FINALE</span>
+                            <span class="animate-pulse">● LIVE_SERVER</span>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4 uppercase">
+                            Il mio viaggio nella <br class="hidden sm:inline">
+                            <span class="text-cyber-cyan drop-shadow-sm font-mono font-black">Formazione Scuola-Lavoro</span>
+                        </h2>
+                        <p class="text-slate-300 leading-relaxed mb-6 text-sm md:text-base">
+                            Benvenuti nel terminale centrale del mio percorso FSL (ex PCTO). Durante questo triennio ho interfacciato le mie conoscenze teoriche scolastiche con scenari industriali e tecnologici di livello reale, accumulando un totale di <strong class="text-cyber-green">150 ore certificate</strong> di attività pratica, formazione professionale e sviluppo sul campo.
+                        </p>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="bg-cyber-dark/80 border border-slate-800 p-4 rounded-lg font-mono">
+                        <div class="flex justify-between text-xs mb-1.5">
+                            <span class="text-slate-400">AVANZAMENTO REQUISITO ORE TRIENNALI</span>
+                            <span class="text-cyber-green font-bold">100% COMPLETATO (150/150h)</span>
+                        </div>
+                        <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden p-[1px] border border-slate-700/60">
+                            <div class="bg-gradient-to-r from-cyber-cyan to-cyber-green h-full rounded-full shadow-neon-green/30" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Diagnostics Grid (Updated) -->
+                <div class="bg-cyber-darker border border-cyber-pink/30 p-6 rounded-xl relative flex flex-col justify-between font-mono">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-cyber-pink/5 rounded-full blur-2xl pointer-events-none"></div>
+                    <div>
+                        <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                            <span class="text-xs text-cyber-pink">// DIAGNOSTICA_SISTEMA</span>
+                            <i class="fa-solid fa-heartbeat text-cyber-pink text-xs animate-pulse"></i>
+                        </div>
+                        <ul class="space-y-3.5 text-xs text-slate-300">
+                            <li class="flex justify-between">
+                                <span class="text-slate-500">Studente:</span>
+                                <span class="text-cyber-cyan font-bold text-right text-shadow-sm">Antony Barletta (5BI)</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-slate-500">Percorso formativo:</span>
+                                <span class="text-white text-right">Informatica & Telecomunicazioni</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-slate-500">Periodo Triennio:</span>
+                                <span class="text-white text-right">2023 - 2026</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-slate-500">Certificazione Sicurezza:</span>
+                                <span class="text-cyber-green font-bold text-right">SUPERATA (D.Lgs 81/08)</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-slate-500">Tutor Scolastico:</span>
+                                <span class="text-cyber-yellow text-right">Prof.ssa Elena D'Alo</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-6 pt-4 border-t border-slate-800/80 text-[11px] text-slate-400 flex flex-col gap-1 bg-cyber-dark/40 p-2.5 rounded">
+                        <span class="text-cyber-yellow"><i class="fas fa-triangle-exclamation mr-1"></i> LOGS_SYSTEM:</span>
+                        <div class="overflow-hidden h-12 relative text-cyber-green font-bold text-[10px]">
+                            <div class="absolute animate-[slideUp_10s_infinite] space-y-1">
+                                <div>[SYS_OK] Caricamento moduli d'esame...</div>
+                                <div>[D'ALO_VERIFIED] Tutor scolastico Prof.ssa Elena D'Alo connessa...</div>
+                                <div>[SYS_OK] Connessione database scolastico stabilita...</div>
+                                <div>[BARLETTA_SYS] Profilo studente Antony Barletta verificato in 5BI!</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Three Pillars of FSL -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-cyber-dark border border-slate-800 hover:border-cyber-cyan/50 p-5 rounded-xl transition-all hover:scale-[1.01]">
+                    <div class="h-10 w-10 bg-cyber-cyan/10 text-cyber-cyan rounded-lg flex items-center justify-center mb-4 border border-cyber-cyan/30 text-lg">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Dimensione Curriculare</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Applicazione in contesti industriali reali delle competenze teoriche di programmazione, networking, sicurezza e gestione database studiate in aula.
+                    </p>
+                </div>
+                <div class="bg-cyber-dark border border-slate-800 hover:border-cyber-pink/50 p-5 rounded-xl transition-all hover:scale-[1.01]">
+                    <div class="h-10 w-10 bg-cyber-pink/10 text-cyber-pink rounded-lg flex items-center justify-center mb-4 border border-cyber-pink/30 text-lg">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Dimensione Esperienziale</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Sviluppo di dinamiche lavorative reali: rispetto degli orari, flessibilità, flussi di sviluppo agili, collaborazione in team gerarchici e project management.
+                    </p>
+                </div>
+                <div class="bg-cyber-dark border border-slate-800 hover:border-cyber-green/50 p-5 rounded-xl transition-all hover:scale-[1.01]">
+                    <div class="h-10 w-10 bg-cyber-green/10 text-cyber-green rounded-lg flex items-center justify-center mb-4 border border-cyber-green/30 text-lg">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Dimensione Orientativa</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Acquisizione di una chiara visione del mercato professionale odierno, che ha guidato attivamente le mie scelte per il futuro accademico ed extra-scolastico.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: EXPERIENCES ==================== -->
+        <section id="pane-experiences" class="tab-pane hidden flex flex-col gap-6">
+            <div class="flex items-center justify-between border-b border-cyber-cyan/30 pb-3 font-mono">
+                <h2 class="text-xl font-bold uppercase text-cyber-cyan">// NODI_ESPERIENZA_ATTIVI</h2>
+                <span class="text-xs text-slate-500">Seleziona un nodo per caricarne i dettagli</span>
+            </div>
+
+            <!-- Interactivity with Nodes Map & Details -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Sidebar selector map -->
+                <div class="lg:col-span-5 flex flex-col gap-4 font-mono">
+                    <button onclick="selectExperience(1)" id="exp-btn-1" class="exp-btn text-left p-4 rounded-xl border transition-all flex items-start gap-4 bg-cyber-darker border-slate-800 hover:border-cyber-cyan/40">
+                        <div class="bg-cyber-cyan/10 border border-cyber-cyan/30 p-3 rounded-lg text-cyber-cyan mt-1">
+                            <i class="fa-solid fa-shield-halved text-lg"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-cyber-cyan">NODO_01 // ASL_3_ANNO</span>
+                                <span class="text-slate-400">40 Ore</span>
+                            </div>
+                            <h3 class="font-bold text-sm text-white uppercase">CyberNet Tech S.r.l.</h3>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-1">Manutenzione infrastrutture & Sicurezza</p>
+                        </div>
+                    </button>
+
+                    <button onclick="selectExperience(2)" id="exp-btn-2" class="exp-btn text-left p-4 rounded-xl border transition-all flex items-start gap-4 bg-cyber-darker border-slate-800 hover:border-cyber-green/40">
+                        <div class="bg-cyber-green/10 border border-cyber-green/30 p-3 rounded-lg text-cyber-green mt-1">
+                            <i class="fa-solid fa-code text-lg"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-cyber-green">NODO_02 // ASL_4_ANNO</span>
+                                <span class="text-slate-400">80 Ore</span>
+                            </div>
+                            <h3 class="font-bold text-sm text-white uppercase">WebForge Solutions</h3>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-1">Sviluppo software e DevOps testing</p>
+                        </div>
+                    </button>
+
+                    <button onclick="selectExperience(3)" id="exp-btn-3" class="exp-btn text-left p-4 rounded-xl border transition-all flex items-start gap-4 bg-cyber-darker border-slate-800 hover:border-cyber-pink/40">
+                        <div class="bg-cyber-pink/10 border border-cyber-pink/30 p-3 rounded-lg text-cyber-pink mt-1">
+                            <i class="fa-solid fa-house-laptop text-lg"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-cyber-pink">NODO_03 // SMART_PROJECT</span>
+                                <span class="text-slate-400">30 Ore</span>
+                            </div>
+                            <h3 class="font-bold text-sm text-white uppercase">Lavoro di Gruppo / Project Work</h3>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-1">Impresa Formativa Simulata (IFS)</p>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Main dynamic detail panel -->
+                <div class="lg:col-span-7 bg-cyber-darker border border-cyber-cyan/30 p-6 rounded-xl flex flex-col justify-between relative shadow-neon-cyan/5">
+                    <div id="experience-details" class="transition-all duration-350">
+                        <!-- Dynamic content injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: SKILLS TREE ==================== -->
+        <section id="pane-skills-tree" class="tab-pane hidden flex flex-col gap-6">
+            <div class="flex items-center justify-between border-b border-cyber-green/30 pb-3 font-mono">
+                <h2 class="text-xl font-bold uppercase text-cyber-green">// CORE_COMPETENZE_ACQUISITE</h2>
+                <span class="text-xs text-slate-500">Analisi Soft & Hard Skills</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Hard Skills Panel -->
+                <div class="bg-cyber-darker border border-cyber-cyan/20 p-5 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-4 font-mono">
+                            <i class="fa-solid fa-gears text-cyber-cyan"></i>
+                            <h3 class="font-bold text-white uppercase text-base">Competenze Tecniche (Hard Skills)</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-6">
+                            L'applicazione sul campo mi ha permesso di solidificare e verticalizzare diverse tecnologie informatiche rispetto al programma teorico ministeriale scolastico.
+                        </p>
+                        <div class="space-y-4 font-mono text-sm">
+                            <!-- Skill 1 -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-300">Networking & Security Config</span>
+                                    <span class="text-cyber-cyan">85%</span>
+                                </div>
+                                <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                                    <div class="bg-cyber-cyan h-full rounded-full shadow-neon-cyan/30" style="width: 85%"></div>
+                                </div>
+                            </div>
+                            <!-- Skill 2 -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-300">DevOps, Scripting & Git</span>
+                                    <span class="text-cyber-cyan">90%</span>
+                                </div>
+                                <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                                    <div class="bg-cyber-cyan h-full rounded-full" style="width: 90%"></div>
+                                </div>
+                            </div>
+                            <!-- Skill 3 -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-300">Database Relazionali & Web Coding</span>
+                                    <span class="text-cyber-cyan">80%</span>
+                                </div>
+                                <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                                    <div class="bg-cyber-cyan h-full rounded-full" style="width: 80%"></div>
+                                </div>
+                            </div>
+                            <!-- Skill 4 -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-300">Sicurezza sui luoghi di lavoro (D.Lgs 81/08)</span>
+                                    <span class="text-cyber-green font-bold">100% OK</span>
+                                </div>
+                                <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                                    <div class="bg-cyber-green h-full rounded-full shadow-neon-green/30" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Soft Skills Panel -->
+                <div class="bg-cyber-darker border border-cyber-pink/20 p-5 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-4 font-mono">
+                            <i class="fa-solid fa-people-arrows-left-right text-cyber-pink"></i>
+                            <h3 class="font-bold text-white uppercase text-base">Competenze Trasversali (Soft Skills)</h3>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-6">
+                            L'immersione in veri ambienti lavorativi aziendali ha richiesto e potenziato in modo determinante quelle abilità che non possono essere apprese sui libri di scuola.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                            <div class="bg-cyber-dark p-3.5 rounded-lg border border-slate-800 hover:border-cyber-pink/30 transition-all">
+                                <span class="text-cyber-pink font-bold block mb-1">PROBLEM SOLVING</span>
+                                <span class="text-slate-400 text-[11px]">Risoluzione immediata di anomalie nei deploy software e di conflitti di rete.</span>
+                            </div>
+                            <div class="bg-cyber-dark p-3.5 rounded-lg border border-slate-800 hover:border-cyber-pink/30 transition-all">
+                                <span class="text-cyber-pink font-bold block mb-1">TEAM COLLABORATION</span>
+                                <span class="text-slate-400 text-[11px]">Coordinamento diretto con tutor aziendali e colleghi tramite metodologie Agile/Scrum.</span>
+                            </div>
+                            <div class="bg-cyber-dark p-3.5 rounded-lg border border-slate-800 hover:border-cyber-pink/30 transition-all">
+                                <span class="text-cyber-pink font-bold block mb-1">ADATTABILITÀ</span>
+                                <span class="text-slate-400 text-[11px]">Integrazione rapida all'interno di politiche aziendali di sicurezza informatica.</span>
+                            </div>
+                            <div class="bg-cyber-dark p-3.5 rounded-lg border border-slate-800 hover:border-cyber-pink/30 transition-all">
+                                <span class="text-cyber-pink font-bold block mb-1">PUNTUALITÀ E RESPONSABILITÀ</span>
+                                <span class="text-slate-400 text-[11px]">Massimo rispetto delle scadenze operative imposte dai ticket di supporto interni.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: GEOPOLITICA DIGITALE (UPDATED) ==================== -->
+        <section id="pane-project-life" class="tab-pane hidden flex flex-col gap-6">
+            <div class="flex items-center justify-between border-b border-cyber-yellow/30 pb-3 font-mono">
+                <h2 class="text-xl font-bold uppercase text-cyber-yellow">// GEOPOLITICA_E_SOVRANITA_DIGITALE</h2>
+                <span class="text-xs text-slate-500">Riflessione finale sulle dinamiche di scenario</span>
+            </div>
+
+            <div class="bg-cyber-darker border border-cyber-yellow/20 p-6 rounded-xl relative overflow-hidden">
+                <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-cyber-yellow/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                    <div class="lg:col-span-8 flex flex-col gap-4">
+                        <div class="flex items-center gap-2 font-mono text-xs text-cyber-yellow">
+                            <i class="fa-solid fa-globe"></i>
+                            <span>ANALISI DELLO SCENARIO E RELAZIONI INTERNAZIONALI</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white uppercase font-mono">Cybersecurity e Geopolitica del Digitale</h3>
+                        <p class="text-slate-300 leading-relaxed text-sm md:text-base">
+                            Questo percorso triennale di Formazione Scuola-Lavoro ha modificato concretamente la mia visione del mondo hi-tech. Se prima la programmazione era una passione confinata principalmente all'attività d'aula, l'esperienza a contatto con sistemi reali e flussi di dati complessi mi ha fatto comprendere come la tecnologia e la sicurezza informatica non siano strumenti neutrali, ma elementi centrali della <strong class="text-cyber-cyan">geopolitica globale</strong> e della <strong class="text-cyber-green">sovranità digitale</strong>.
+                        </p>
+                        <p class="text-slate-300 leading-relaxed text-sm md:text-base">
+                            L'analisi delle minacce informatiche, la protezione delle infrastrutture critiche e il controllo del flusso dei dati rappresentano oggi i nuovi confini del potere e del confronto strategico tra gli Stati. Questa maturazione multidisciplinare mi ha spinto a sviluppare un forte interesse verso lo studio della geopolitica applicata al digitale, con l'obiettivo di analizzare l'impatto della cybersecurity e dell'intelligenza artificiale sulle relazioni internazionali, sulla sicurezza degli Stati e sulla tutela della democrazia nell'era dell'informazione globale.
+                        </p>
+                    </div>
+
+                    <!-- Side references block -->
+                    <div class="lg:col-span-4 bg-cyber-dark border border-slate-800 p-5 rounded-lg flex flex-col gap-4 text-xs font-mono">
+                        <h4 class="text-sm font-bold text-white uppercase border-b border-slate-800 pb-2 text-cyber-yellow">Riferimenti Strategici</h4>
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-cyber-cyan/10 border border-cyber-cyan text-cyber-cyan flex items-center justify-center font-bold"><i class="fa-solid fa-user-graduate"></i></div>
+                            <div>
+                                <span class="font-bold text-slate-200">Studente:</span>
+                                <p class="text-[11px] text-cyber-green font-bold">Antony Barletta (5BI)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-cyber-green/10 border border-cyber-green text-cyber-green flex items-center justify-center font-bold"><i class="fa-solid fa-id-card"></i></div>
+                            <div>
+                                <span class="font-bold text-slate-200">Tutor Scolastico:</span>
+                                <p class="text-[11px] text-cyber-yellow font-bold">Prof.ssa Elena D'Alo</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-cyber-pink/10 border border-cyber-pink text-cyber-pink flex items-center justify-center font-bold"><i class="fa-solid fa-school"></i></div>
+                            <div>
+                                <span class="font-bold text-slate-200">Istituto d'Istruzione:</span>
+                                <p class="text-[11px] text-slate-400">Informatica & Telecomunicazioni</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SYSTEM TERMINAL SHELL ==================== -->
+        <section class="bg-cyber-darker border border-cyber-cyan/30 rounded-xl p-4 font-mono shadow-inner">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3 text-xs text-slate-400">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block h-3 w-3 rounded-full bg-red-500/80"></span>
+                    <span class="inline-block h-3 w-3 rounded-full bg-yellow-500/80"></span>
+                    <span class="inline-block h-3 w-3 rounded-full bg-green-500/80"></span>
+                    <span class="ml-2 font-bold text-cyber-cyan">INTERACTIVE_ROOT_SHELL</span>
+                </div>
+                <span>Dispositivi: ONLINE</span>
+            </div>
+
+            <!-- Terminal output history -->
+            <div id="terminal-history" class="text-xs h-32 overflow-y-auto space-y-2 mb-3 pr-2 scrollbar-thin scrollbar-thumb-slate-700">
+                <div class="text-slate-500">[CONNESSIONE STABILITA] Digita "help" per visualizzare i comandi disponibili della console d'esame.</div>
+                <div class="text-cyber-green">ROOT@ANTONY_BARLETTA:~# <span class="text-white">help</span></div>
+                <div class="text-slate-400">Comandi validati nel sistema d'esame:
+  - <span class="text-cyber-cyan">help</span> : Mostra questa guida ai comandi.
+  - <span class="text-cyber-cyan">skills</span> : Elenca le skill tecniche principali.
+  - <span class="text-cyber-cyan">esperienze</span> : Visualizza un riassunto delle ore di formazione.
+  - <span class="text-cyber-cyan">root</span> : Sblocca un easter-egg dell'operatore Antony.
+  - <span class="text-cyber-cyan">clear</span> : Pulisce lo schermo della shell.</div>
+            </div>
+
+            <!-- Shell input -->
+            <form id="terminal-form" onsubmit="handleShellCommand(event)" class="flex items-center gap-2 border-t border-slate-800/80 pt-3">
+                <span class="text-cyber-green text-xs font-bold">ROOT@ANTONY_BARLETTA:~#</span>
+                <input type="text" id="terminal-input" class="bg-transparent text-white border-none outline-none flex-grow text-xs font-mono placeholder:text-slate-600 focus:ring-0 focus:border-none p-0" placeholder="Inserisci un comando..." autocomplete="off">
+                <button type="submit" class="bg-cyber-cyan/10 hover:bg-cyber-cyan/30 border border-cyber-cyan/50 text-cyber-cyan px-3 py-1 rounded text-[10px] transition-all">INVIO</button>
+            </form>
+        </section>
+
+    </main>
+
+    <!-- SYSTEM FOOTER -->
+    <footer class="bg-cyber-darker/60 border-t border-slate-800 p-4 font-mono text-center text-[10px] text-slate-500 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>PRESENTAZIONE FSL TRIENNIO // ANTONY BARLETTA ESAME DI STATO</span>
+            <span class="text-cyber-cyan">COSTRUITO CON CUORE IN UN'ARCHITETTURA CYBER-DECK</span>
+        </div>
+    </footer>
+
+    <!-- INTERACTION LOGIC & JAVASCRIPT -->
+    <script>
+        // Web Audio Synthesizer implementation to avoid relying on external files!
+        let audioCtx = null;
+        let droneOsc = null;
+        let droneGain = null;
+        let isDronePlaying = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Web Audio synthesized Ambient Cyberpunk Drone
+        function startDrone() {
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // Create oscillators for a deep rich cyberpunk chord/drone
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const filter = audioCtx.createBiquadFilter();
+            droneGain = audioCtx.createGain();
+
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(65.41, audioCtx.currentTime); // C2
+
+            osc2.type = 'sawtooth';
+            osc2.frequency.setValueAtTime(130.81, audioCtx.currentTime); // C3 (1 octave up)
+            // Detune slightly for lush chorus effect
+            osc2.detune.setValueAtTime(12, audioCtx.currentTime); 
+
+            // Lowpass filter sweep for high-tech sci-fi feeling
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(150, audioCtx.currentTime);
+            filter.Q.setValueAtTime(4, audioCtx.currentTime);
+
+            // Gently modulate filter frequency
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            lfo.frequency.setValueAtTime(0.15, audioCtx.currentTime); // Slow sweep
+            lfoGain.gain.setValueAtTime(80, audioCtx.currentTime);
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+
+            // Connect nodes
+            osc1.connect(filter);
+            osc2.connect(filter);
+            filter.connect(droneGain);
+            droneGain.connect(audioCtx.destination);
+
+            // Smooth start transition
+            droneGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            droneGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 3); // subtle ambient level
+
+            osc1.start();
+            osc2.start();
+            lfo.start();
+
+            droneOsc = [osc1, osc2, lfo];
+            isDronePlaying = true;
+            
+            document.getElementById('drone-icon').className = 'fas fa-stop text-cyber-pink';
+            document.getElementById('drone-text').innerText = 'Spegni Cyber-Drone';
+            document.getElementById('drone-text').className = 'text-cyber-pink font-bold';
+        }
+
+        // Ambient stop function
+        function stopDrone() {
+            if (droneGain) {
+                droneGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+                setTimeout(() => {
+                    if (droneOsc) {
+                        droneOsc.forEach(osc => osc.stop());
+                    }
+                    isDronePlaying = false;
+                    document.getElementById('drone-icon').className = 'fas fa-play text-cyber-cyan';
+                    document.getElementById('drone-text').innerText = 'Sottofondo Cyber-Drone';
+                    document.getElementById('drone-text').className = 'text-cyber-cyan';
+                }, 1000);
+            }
+        }
+
+        // Mechanical Terminal Click sound generator
+        function playClickSound() {
+            try {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                // Noise Buffer for organic plastic click
+                const bufferSize = audioCtx.sampleRate * 0.05; // 50ms click
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                // Highpass filter for crisp click sound
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.setValueAtTime(3500, audioCtx.currentTime);
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                noise.start();
+            } catch (e) {
+                // Audio not authorized yet
+            }
+        }
+
+        // Toggle drone logic
+        document.getElementById('toggle-drone').addEventListener('click', () => {
+            if (!isDronePlaying) {
+                startDrone();
+            } else {
+                stopDrone();
+            }
+        });
+
+        // EXPERIENCE DATA DICTIONARY (Updated)
+        const experiencesData = {
+            1: {
+                title: "Infrastrutture & Cyber-Security Assistant",
+                company: "CyberNet Tech S.r.l.",
+                period: "Classe 3ª (Anno Scolastico 2023/24)",
+                hours: "40 Ore Certificate",
+                tutor: "Ing. Marco Rossi (Tutor Aziendale)",
+                desc: "Primo inserimento strutturato in un ambiente di produzione sistemistica. Affiancamento nella configurazione iniziale di reti LAN, installazione e debugging di server basati su distribuzioni Linux Server Debian/Ubuntu, e studio delle politiche base del firewall di sicurezza aziendale.",
+                tasks: [
+                    "Analisi preliminare dei registri di sistema per la diagnosi di errori di rete.",
+                    "Configurazione di base di schede di rete e virtualizzazione VLAN.",
+                    "Formazione sui protocolli di sicurezza standard e audit delle vulnerabilità esterne."
+                ],
+                outcomes: "Padronanza assoluta della linea di comando Unix/Linux e dei concetti chiave di routing/subnetting applicati a scenari reali di networking.",
+                accentColor: "cyan"
+            },
+            2: {
+                title: "Software Engineer & DevOps Testing Assistant",
+                company: "WebForge Solutions",
+                period: "Classe 4ª (Anno Scolastico 2024/25)",
+                hours: "80 Ore Certificate",
+                tutor: "Dott.ssa Sofia Bianchi (Senior Developer)",
+                desc: "Esperienza focalizzata sul ciclo di vita del software e integrazione continua (DevOps). Ho lavorato con metodologie Agile integrandomi in sprint settimanali di sviluppo web frontend e test automatici di backend, interfacciandomi anche con database aziendali.",
+                tasks: [
+                    "Risoluzione di problematiche web su layout responsive mediante Git per la gestione delle versioni.",
+                    "Sviluppo di test unitari automatici su API REST.",
+                    "Analisi dei database PostgreSQL interni e ottimizzazione delle query di lettura dati."
+                ],
+                outcomes: "Comprensione delle metodologie agili di programmazione, abitudine al lavoro asincrono distribuito tramite Git e sviluppo orientato ai ticket d'assistenza.",
+                accentColor: "green"
+            },
+            3: {
+                title: "Sviluppatore Progetto Nazionale IFS",
+                company: "Impresa Formativa Simulata (IFS)",
+                period: "Classe 5ª (Anno Scolastico 2025/26)",
+                hours: "30 Ore Certificate",
+                tutor: "Prof.ssa Elena D'Alo",
+                desc: "Sviluppo in team di una cooperativa virtuale specializzata in soluzioni IoT e di monitoraggio energetico domestico. Abbiamo pianificato, strutturato ed esposto un business-plan tecnologico completo, simulando l'intera catena di vendita e marketing tecnologico.",
+                tasks: [
+                    "Sviluppo dell'architettura dell'interfaccia prototipale di monitoraggio IoT.",
+                    "Redazione del materiale tecnico di specifiche e documentazione per l'utente finale.",
+                    "Presentazione in modalità pitch deck ai restanti gruppi di simulazione d'impresa."
+                ],
+                outcomes: "Capacità organizzativa, coordinamento di un team misto di sviluppo, pianificazione finanziaria preliminare di un ecosistema commerciale IT.",
+                accentColor: "pink"
+            }
+        };
+
+        // UI Tabs navigation logic
+        function switchTab(tabId) {
+            playClickSound();
+
+            // Hide all tab content panes
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.add('hidden');
+            });
+
+            // Deactivate all tab buttons styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-cyber-cyan', 'text-white', 'bg-cyber-darker', 'shadow-neon-cyan/20');
+                btn.classList.add('border-transparent', 'text-slate-400', 'bg-transparent');
+            });
+
+            // Show selected pane
+            const targetPane = document.getElementById(`pane-${tabId}`);
+            if (targetPane) {
+                targetPane.classList.remove('hidden');
+            }
+
+            // Style selected button
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-slate-400', 'bg-transparent');
+                activeBtn.classList.add('border-cyber-cyan', 'text-white', 'bg-cyber-darker', 'shadow-neon-cyan/20');
+            }
+        }
+
+        // Experiences Selector Logic
+        function selectExperience(index) {
+            playClickSound();
+
+            // Active button style resetting
+            document.querySelectorAll('.exp-btn').forEach(btn => {
+                btn.classList.remove('border-cyber-cyan', 'border-cyber-green', 'border-cyber-pink', 'bg-cyber-cyan/5', 'bg-cyber-green/5', 'bg-cyber-pink/5');
+                btn.classList.add('border-slate-800');
+            });
+
+            const data = experiencesData[index];
+            const activeBtn = document.getElementById(`exp-btn-${index}`);
+            
+            let accentClass = '';
+            let shadowClass = '';
+            if (data.accentColor === 'cyan') {
+                accentClass = 'border-cyber-cyan bg-cyber-cyan/5';
+                shadowClass = 'shadow-neon-cyan/10';
+            } else if (data.accentColor === 'green') {
+                accentClass = 'border-cyber-green bg-cyber-green/5';
+                shadowClass = 'shadow-neon-green/10';
+            } else {
+                accentClass = 'border-cyber-pink bg-cyber-pink/5';
+                shadowClass = 'shadow-neon-pink/10';
+            }
+
+            activeBtn.classList.remove('border-slate-800');
+            activeBtn.classList.add(...accentClass.split(' '));
+
+            // Generate HTML layout injection dynamically
+            const container = document.getElementById('experience-details');
+            
+            let colorHex = data.accentColor === 'cyan' ? '#00f0ff' : (data.accentColor === 'green' ? '#39ff14' : '#ff007f');
+
+            container.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-800 pb-3">
+                        <div>
+                            <span class="text-xs font-mono font-bold" style="color: ${colorHex}">// ${data.period}</span>
+                            <h3 class="text-2xl font-bold text-white uppercase mt-0.5">${data.title}</h3>
+                            <h4 class="text-sm font-semibold text-slate-400 font-mono"><i class="fas fa-building mr-1.5"></i>${data.company}</h4>
+                        </div>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded border" style="color: ${colorHex}; border-color: ${colorHex}50; background-color: ${colorHex}10">
+                            ${data.hours}
+                        </span>
+                    </div>
+
+                    <div class="space-y-4 text-sm">
+                        <div>
+                            <p class="text-slate-300 leading-relaxed">${data.desc}</p>
+                        </div>
+
+                        <!-- Tasks/Attività -->
+                        <div class="bg-cyber-dark/60 border border-slate-800 p-4 rounded-lg">
+                            <h5 class="font-mono text-xs font-bold text-white mb-2 uppercase tracking-wider">// ATTIVITÀ OPERATIVE PRINCIPALI:</h5>
+                            <ul class="space-y-2 text-slate-300 text-xs font-mono">
+                                ${data.tasks.map(t => `<li class="flex items-start gap-2"><span class="text-[${colorHex}] mt-0.5" style="color: ${colorHex}">➤</span> <span>${t}</span></li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <!-- Outcomes / Competenze acquisite -->
+                        <div class="space-y-1.5">
+                            <span class="font-mono text-xs font-bold text-white uppercase block">// RISULTATO DI APPRENDIMENTO:</span>
+                            <p class="text-xs text-slate-400 leading-relaxed bg-slate-900 p-3 rounded border border-slate-800/80 italic">
+                                "${data.outcomes}"
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Foot details -->
+                    <div class="border-t border-slate-800/80 pt-3.5 flex justify-between items-center text-[10px] font-mono text-slate-500">
+                        <span>TUTOR REFERENTE: ${data.tutor}</span>
+                        <span>DATO VERIFICATO</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Terminal Shell Simulator Functionality (Updated)
+        function handleShellCommand(event) {
+            event.preventDefault();
+            const inputEl = document.getElementById('terminal-input');
+            const historyEl = document.getElementById('terminal-history');
+            const command = inputEl.value.trim().toLowerCase();
+            
+            if (!command) return;
+
+            playClickSound();
+
+            // Append command user entered
+            const userCommandDiv = document.createElement('div');
+            userCommandDiv.className = 'text-cyber-green';
+            userCommandDiv.innerHTML = `ROOT@ANTONY_BARLETTA:~# <span class="text-white">${inputEl.value}</span>`;
+            historyEl.appendChild(userCommandDiv);
+
+            // Execute switch matching commands
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'text-slate-400 whitespace-pre-line pl-2 border-l border-slate-800 py-1 my-1';
+
+            switch(command) {
+                case 'help':
+                    responseDiv.innerHTML = `Comandi validati nel sistema d'esame:
+  - <span class="text-cyber-cyan">help</span> : Mostra questa guida ai comandi.
+  - <span class="text-cyber-cyan">skills</span> : Elenca le skill tecniche principali.
+  - <span class="text-cyber-cyan">esperienze</span> : Visualizza un riassunto delle ore di formazione.
+  - <span class="text-cyber-cyan">root</span> : Sblocca un easter-egg dell'operatore Antony Barletta.
+  - <span class="text-cyber-cyan">clear</span> : Pulisce lo schermo della shell.`;
+                    break;
+                case 'skills':
+                    responseDiv.innerHTML = `<span class="text-white font-bold">CORE_HARD_SKILLS:</span>
+- Networking Configuration: 85%
+- DevOps Scripting & Git: 90%
+- Relational Databases: 80%
+- Sicurezza sul Lavoro (D.Lgs 81/08): SUPERATO`;
+                    break;
+                case 'esperienze':
+                    responseDiv.innerHTML = `<span class="text-white font-bold">RIEPILOGO ORE CERTIFICATE:</span>
+- Anno 3 (CyberNet Tech S.r.l.): <span class="text-cyber-cyan">40 ore</span>
+- Anno 4 (WebForge Solutions): <span class="text-cyber-green">80 ore</span>
+- Anno 5 (Project Work / IFS): <span class="text-cyber-pink">30 ore</span>
+-------------------------------------------------------
+<span class="text-cyber-green font-bold">ORE TOTALI: 150/150h CERTIFICATE</span>`;
+                    break;
+                case 'root':
+                    responseDiv.innerHTML = `<span class="text-cyber-pink font-bold">*** EASTER EGG SBLOCCATO // ACCESSO SUPER-USER REALE ***</span>
+"La geopolitica e la sicurezza delle infrastrutture nazionali non sono solo traguardi d'esame... Sono la spina dorsale della sovranità digitale del nostro domani!" - Operatore Antony Barletta.`;
+                    break;
+                case 'clear':
+                    historyEl.innerHTML = '';
+                    inputEl.value = '';
+                    return;
+                default:
+                    responseDiv.innerHTML = `<span class="text-cyber-pink">ERRORE: Comando "${command}" sconosciuto o non autorizzato.</span> Digita <span class="text-cyber-cyan">"help"</span> per aiuto.`;
+            }
+
+            historyEl.appendChild(responseDiv);
+            inputEl.value = '';
+
+            // Auto-scroll to bottom of terminal
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        // Global key event to play cyber-mechanical feedback on keyboard input
+        document.addEventListener('keydown', (e) => {
+            // Only trigger if inside terminal input to avoid annoying user elsewhere
+            if (document.activeElement.id === 'terminal-input') {
+                playClickSound();
+            }
+        });
+
+        // App Boot Loader Lifecycle
+        window.onload = function() {
+            // Enable default home screen tab first
+            switchTab('system-info');
+            // Auto-select node 1 on start up for experiences
+            selectExperience(1);
+        }
+    </script>
+</body>
+</html>
